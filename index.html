@@ -1,53 +1,130 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>RazNas Notebook Server</title>
-    <style>
-        html, body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
-            background: #0f172a;
-        }
-
-        /* Top bar */
-        .header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 50px;
-            background: #111827;
-            color: #22c55e;
-            display: flex;
-            align-items: center;
-            padding-left: 15px;
-            font-size: 18px;
-            font-weight: bold;
-            z-index: 10;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-        }
-
-        iframe {
-            position: absolute;
-            top: 50px;
-            left: 0;
-            width: 100vw;
-            height: calc(100vh - 50px);
-            border: none;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>RazNas Notebook Runner</title>
+<style>
+body {
+    margin: 0;
+    font-family: monospace;
+    background: #0f172a;
+    color: #f1f5f9;
+}
+.header {
+    background: #111827;
+    color: #22c55e;
+    padding: 10px 15px;
+    font-size: 20px;
+    font-weight: bold;
+}
+.cell {
+    margin: 10px;
+    background: #1e293b;
+    padding: 10px;
+    border-radius: 5px;
+}
+textarea {
+    width: 100%;
+    height: 100px;
+    background: #1e293b;
+    color: #f1f5f9;
+    border: none;
+    padding: 10px;
+    font-family: monospace;
+    font-size: 14px;
+}
+button {
+    background: #22c55e;
+    border: none;
+    padding: 6px 12px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 5px;
+    color: #0f172a;
+    border-radius: 3px;
+}
+pre {
+    background: #111827;
+    padding: 10px;
+    white-space: pre-wrap;
+    margin-top: 5px;
+    border-radius: 3px;
+}
+</style>
 </head>
 <body>
 
-    <div class="header">
-        ⚡ RazNas Notebook Server
-    </div>
+<div class="header">⚡ RazNas Notebook Runner</div>
 
-    <iframe src="http://192.168.1.104:8888"></iframe>
+<div id="notebook"></div>
+
+<button onclick="addCell()">➕ Add Cell</button>
+
+<script>
+const BASE_URL = "http://127.0.0.1:8888";
+const TOKEN = "cc31b400c18c46023ee6195dc5fa8bd6eabf7281977d6b44";
+
+async function createKernel() {
+    const res = await fetch(`${BASE_URL}/api/kernels?token=${TOKEN}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "python3" })
+    });
+    const data = await res.json();
+    return data.id;
+}
+
+let kernelIdPromise = createKernel();
+
+function addCell() {
+    const notebook = document.getElementById("notebook");
+
+    const cellDiv = document.createElement("div");
+    cellDiv.className = "cell";
+
+    const textarea = document.createElement("textarea");
+    textarea.placeholder = "Type your Python code here...";
+
+    const runBtn = document.createElement("button");
+    runBtn.textContent = "Run";
+    
+    const output = document.createElement("pre");
+
+    runBtn.onclick = async () => {
+        output.textContent = "Running...";
+        const kernelId = await kernelIdPromise;
+        const ws = new WebSocket(`ws://127.0.0.1:8888/api/kernels/${kernelId}/channels?token=${TOKEN}`);
+        
+        ws.onopen = () => {
+            ws.send(JSON.stringify({
+                header: { msg_type: "execute_request", msg_id: Math.random().toString(36).substr(2,9) },
+                parent_header: {},
+                metadata: {},
+                content: { code: textarea.value, silent: false }
+            }));
+        };
+        
+        ws.onmessage = (msg) => {
+            try {
+                const data = JSON.parse(msg.data);
+                if(data.msg_type === "execute_result" || data.msg_type === "stream") {
+                    output.textContent += (data.content.text || data.content.data["text/plain"]) + "\n";
+                }
+            } catch(e) {}
+        };
+        
+        ws.onerror = (e) => { output.textContent = "Error connecting to kernel"; }
+    };
+
+    cellDiv.appendChild(textarea);
+    cellDiv.appendChild(runBtn);
+    cellDiv.appendChild(output);
+    notebook.appendChild(cellDiv);
+}
+
+// Add first cell by default
+addCell();
+</script>
 
 </body>
 </html>
