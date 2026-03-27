@@ -2,128 +2,84 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>RazNas Notebook Runner</title>
+<title>OroLabs Protolab</title>
+
 <style>
-body {
+html, body {
     margin: 0;
-    font-family: monospace;
+    padding: 0;
+    height: 100%;
     background: #0f172a;
-    color: #f1f5f9;
+    font-family: Arial, sans-serif;
 }
+
+/* Header */
 .header {
+    height: 50px;
     background: #111827;
-    color: #22c55e;
-    padding: 10px 15px;
-    font-size: 20px;
+    color: #38bdf8;
+    display: flex;
+    align-items: center;
+    padding-left: 15px;
+    font-size: 18px;
     font-weight: bold;
 }
-.cell {
-    margin: 10px;
-    background: #1e293b;
-    padding: 10px;
-    border-radius: 5px;
-}
-textarea {
+
+/* Iframe */
+iframe {
     width: 100%;
-    height: 100px;
-    background: #1e293b;
-    color: #f1f5f9;
+    height: calc(100vh - 50px);
     border: none;
-    padding: 10px;
-    font-family: monospace;
-    font-size: 14px;
 }
-button {
-    background: #22c55e;
-    border: none;
-    padding: 6px 12px;
-    font-weight: bold;
-    cursor: pointer;
-    margin-top: 5px;
-    color: #0f172a;
-    border-radius: 3px;
-}
-pre {
-    background: #111827;
-    padding: 10px;
-    white-space: pre-wrap;
-    margin-top: 5px;
-    border-radius: 3px;
+
+/* Fallback message */
+#fallback {
+    display: none;
+    color: #f87171;
+    font-size: 20px;
+    text-align: center;
+    margin-top: 40px;
 }
 </style>
 </head>
 <body>
 
-<div class="header">⚡ RazNas Notebook Runner</div>
+<div class="header">⚡ OroLabs Protolab</div>
 
-<div id="notebook"></div>
+<div id="fallback">Server is not available.</div>
 
-<button onclick="addCell()">➕ Add Cell</button>
+<iframe id="frame"
+    src="">
+</iframe>
 
 <script>
-const BASE_URL = "http://127.0.0.1:8888";
-const TOKEN = "cc31b400c18c46023ee6195dc5fa8bd6eabf7281977d6b44";
+const iframe = document.getElementById("frame");
+const fallback = document.getElementById("fallback");
 
-async function createKernel() {
-    const res = await fetch(`${BASE_URL}/api/kernels?token=${TOKEN}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: "python3" })
-    });
-    const data = await res.json();
-    return data.id;
-}
+// If iframe loads successfully
+iframe.onload = () => {
+    // Hide fallback just in case
+    fallback.style.display = "none";
+};
 
-let kernelIdPromise = createKernel();
+// If iframe fails (network issue, server down)
+iframe.onerror = () => {
+    iframe.style.display = "none";
+    fallback.style.display = "block";
+};
 
-function addCell() {
-    const notebook = document.getElementById("notebook");
-
-    const cellDiv = document.createElement("div");
-    cellDiv.className = "cell";
-
-    const textarea = document.createElement("textarea");
-    textarea.placeholder = "Type your Python code here...";
-
-    const runBtn = document.createElement("button");
-    runBtn.textContent = "Run";
-    
-    const output = document.createElement("pre");
-
-    runBtn.onclick = async () => {
-        output.textContent = "Running...";
-        const kernelId = await kernelIdPromise;
-        const ws = new WebSocket(`ws://127.0.0.1:8888/api/kernels/${kernelId}/channels?token=${TOKEN}`);
-        
-        ws.onopen = () => {
-            ws.send(JSON.stringify({
-                header: { msg_type: "execute_request", msg_id: Math.random().toString(36).substr(2,9) },
-                parent_header: {},
-                metadata: {},
-                content: { code: textarea.value, silent: false }
-            }));
-        };
-        
-        ws.onmessage = (msg) => {
-            try {
-                const data = JSON.parse(msg.data);
-                if(data.msg_type === "execute_result" || data.msg_type === "stream") {
-                    output.textContent += (data.content.text || data.content.data["text/plain"]) + "\n";
-                }
-            } catch(e) {}
-        };
-        
-        ws.onerror = (e) => { output.textContent = "Error connecting to kernel"; }
-    };
-
-    cellDiv.appendChild(textarea);
-    cellDiv.appendChild(runBtn);
-    cellDiv.appendChild(output);
-    notebook.appendChild(cellDiv);
-}
-
-// Add first cell by default
-addCell();
+// Extra safety: timeout check
+setTimeout(() => {
+    try {
+        // If still blank after 5 seconds, assume failure
+        if (!iframe.contentWindow || iframe.contentDocument.body.innerHTML === "") {
+            iframe.style.display = "none";
+            fallback.style.display = "block";
+        }
+    } catch (e) {
+        // Cross-origin = assume it's actually working
+    }
+}, 5000);
 </script>
 
 </body>
