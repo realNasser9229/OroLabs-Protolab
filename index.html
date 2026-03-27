@@ -1,86 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>OroLabs Protolab</title>
-
-<style>
-html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    background: #0f172a;
-    font-family: Arial, sans-serif;
-}
-
-/* Header */
-.header {
-    height: 50px;
-    background: #111827;
-    color: #38bdf8;
-    display: flex;
-    align-items: center;
-    padding-left: 15px;
-    font-size: 18px;
-    font-weight: bold;
-}
-
-/* Iframe */
-iframe {
-    width: 100%;
-    height: calc(100vh - 50px);
-    border: none;
-}
-
-/* Fallback message */
-#fallback {
-    display: none;
-    color: #f87171;
-    font-size: 20px;
-    text-align: center;
-    margin-top: 40px;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OroLabs Protolab | New notebook</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+        iframe {
+            border: none;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
 </head>
 <body>
-
-<div class="header">⚡ OroLabs Protolab</div>
-
-<div id="fallback">Server is not available.</div>
-
-<iframe id="frame"
-    src="">
-</iframe>
-
-<script>
-const iframe = document.getElementById("frame");
-const fallback = document.getElementById("fallback");
-
-// If iframe loads successfully
-iframe.onload = () => {
-    // Hide fallback just in case
-    fallback.style.display = "none";
-};
-
-// If iframe fails (network issue, server down)
-iframe.onerror = () => {
-    iframe.style.display = "none";
-    fallback.style.display = "block";
-};
-
-// Extra safety: timeout check
-setTimeout(() => {
-    try {
-        // If still blank after 5 seconds, assume failure
-        if (!iframe.contentWindow || iframe.contentDocument.body.innerHTML === "") {
-            iframe.style.display = "none";
-            fallback.style.display = "block";
-        }
-    } catch (e) {
-        // Cross-origin = assume it's actually working
-    }
-}, 5000);
-</script>
-
+    <iframe src="https://razpc.github.io/random/" allowfullscreen></iframe>
 </body>
 </html>
